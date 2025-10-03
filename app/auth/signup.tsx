@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
+/* eslint-disable @typescript-eslint/no-var-requires */
 import React, { useState, useContext } from "react";
 import {
   View,
@@ -8,76 +8,124 @@ import {
   StyleSheet,
   ActivityIndicator,
 } from "react-native";
-import { Link } from "expo-router";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-// Update the import path to match your actual layout file location
-import { AuthContext } from "../_layout"; // Import AuthContext from the parent layout
+import { Link, useRouter } from "expo-router";
+import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+// Assuming _layout.tsx holds the AuthContext
+import { AuthContext } from "../../app/_layout";
 
-const SignupScreen: React.FC = () => {
-  const { app } = useContext(AuthContext);
+export default function SignUpScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
-  const handleSignup = async () => {
-    if (!app || !email || !password || password.length < 6) {
-      setError("Password must be at least 6 characters.");
+  // Get the initialized Firebase App instance from context
+  const { app } = useContext(AuthContext);
+
+  const handleSignUp = async () => {
+    // 1. Client-side Validation Checks (unchanged)
+    if (!email || !password || !confirmPassword) {
+      setError("Please fill in all fields.");
       return;
     }
 
-    setLoading(true);
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters long.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    // 2. Firebase Sign Up Logic
+    setIsLoading(true);
     setError("");
 
     try {
-      const auth = getAuth(app);
-      await createUserWithEmailAndPassword(auth, email, password);
-      // Auth state listener in layout.tsx handles setting the userId and navigation
-    } catch (e: any) {
-      console.error("Sign-up Error: ", e);
-      if (e.code === "auth/email-already-in-use") {
-        setError("This email is already registered.");
-      } else if (e.code === "auth/weak-password") {
-        setError("Password should be at least 6 characters.");
-      } else {
-        setError("Sign up failed. Please try again.");
+      // *** FIX ***: Safely check for the initialized app instance
+      if (!app) {
+        throw new Error(
+          "Firebase App is not initialized. Please check your _layout.tsx file."
+        );
       }
-    } finally {
-      setLoading(false);
+
+      // *** FIX ***: Get the auth service using the initialized app instance
+      const auth = getAuth(app);
+
+      await createUserWithEmailAndPassword(auth, email, password);
+
+      // On successful sign-up, redirection is handled
+      router.replace("/home");
+    } catch (e: unknown) {
+      setIsLoading(false);
+      let errorMessage = "An unknown error occurred during sign-up.";
+
+      if (e instanceof Error) {
+        // Logging the full error object for detailed debugging in the terminal
+        console.error("Authentication error:", e);
+
+        // Parse common Firebase errors for friendlier messages
+        if ("code" in e && typeof e.code === "string") {
+          if (e.code === "auth/invalid-email") {
+            errorMessage = "The email address is not valid.";
+          } else if (e.code === "auth/email-already-in-use") {
+            errorMessage = "This email is already registered.";
+          } else if (e.code === "auth/operation-not-allowed") {
+            errorMessage =
+              "Account creation is currently disabled. Check Firebase settings.";
+          } else if (e.code === "auth/network-request-failed") {
+            errorMessage = "Network error or firewall blocked the request.";
+          } else {
+            errorMessage = e.message;
+          }
+        }
+      }
+      setError(errorMessage);
     }
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create Your Account</Text>
+      <Text style={styles.title}>Create Account</Text>
 
       <TextInput
         style={styles.input}
+        placeholder="Email"
         value={email}
         onChangeText={setEmail}
-        placeholder="Email"
         keyboardType="email-address"
         autoCapitalize="none"
-        placeholderTextColor="#888"
       />
+
       <TextInput
         style={styles.input}
+        placeholder="Password (min 6 characters)"
         value={password}
         onChangeText={setPassword}
-        placeholder="Password (min 6 characters)"
         secureTextEntry
-        placeholderTextColor="#888"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChangeText={setConfirmPassword}
+        secureTextEntry
       />
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
 
       <TouchableOpacity
-        style={[styles.button, loading && styles.buttonDisabled]}
-        onPress={handleSignup}
-        disabled={loading}
+        style={[styles.button, isLoading && styles.buttonDisabled]}
+        onPress={handleSignUp}
+        disabled={isLoading}
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
+        {isLoading ? (
+          <ActivityIndicator color="#ffffff" />
         ) : (
           <Text style={styles.buttonText}>Sign Up</Text>
         )}
@@ -91,69 +139,69 @@ const SignupScreen: React.FC = () => {
       </View>
     </View>
   );
-};
-
-export default SignupScreen;
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#f3f4f6",
-    padding: 30,
+    padding: 24,
+    backgroundColor: "#f8fafc",
   },
   title: {
     fontSize: 32,
-    fontWeight: "700",
-    color: "#1f2937",
-    marginBottom: 40,
+    fontWeight: "bold",
+    marginBottom: 32,
+    textAlign: "center",
+    color: "#0f172a",
   },
   input: {
-    width: "100%",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    height: 50,
+    borderColor: "#e2e8f0",
     borderWidth: 1,
-    borderColor: "#d1d5db",
     borderRadius: 8,
-    fontSize: 16,
-    color: "#1f2937",
-    backgroundColor: "#fff",
+    paddingHorizontal: 15,
     marginBottom: 15,
+    backgroundColor: "#ffffff",
   },
   button: {
-    width: "100%",
     backgroundColor: "#3b82f6",
-    paddingVertical: 15,
+    padding: 15,
     borderRadius: 8,
     alignItems: "center",
-    justifyContent: "center",
     marginTop: 10,
+    shadowColor: "#3b82f6",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 6,
   },
   buttonDisabled: {
     backgroundColor: "#93c5fd",
   },
   buttonText: {
     color: "#ffffff",
-    fontWeight: "600",
     fontSize: 18,
+    fontWeight: "bold",
   },
   errorText: {
     color: "#ef4444",
+    textAlign: "center",
     marginBottom: 15,
-    fontSize: 14,
+    fontWeight: "500",
   },
   linkContainer: {
     flexDirection: "row",
+    justifyContent: "center",
     marginTop: 20,
   },
   linkText: {
-    color: "#4b5563",
-    fontSize: 16,
+    fontSize: 14,
+    color: "#475569",
   },
   link: {
+    fontSize: 14,
     color: "#3b82f6",
-    fontWeight: "600",
-    fontSize: 16,
+    fontWeight: "bold",
   },
 });
