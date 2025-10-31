@@ -1,150 +1,114 @@
-/* eslint-disable @typescript-eslint/no-unused-vars */
-import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { Link, useSegments } from 'expo-router';
-import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
-import { AuthContext } from '../_layout'; // Import AuthContext from the root layout
+import React, { useContext, useEffect } from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  TextInput,
+} from "react-native";
+import { AuthContext } from "../_layout";
+import { useRouter } from "expo-router"; // <--- NEW IMPORT
 
-const LoginScreen: React.FC = () => {
-  const { app } = useContext(AuthContext);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
+export default function LoginScreen() {
+  const { mockSignIn, userId } = useContext(AuthContext); // <--- userId needed for useEffect
+  const router = useRouter(); // <--- Initialize router
 
-  const handleLogin = async () => {
-    if (!app || !email || !password) {
-      setError("Please enter email and password.");
-      return;
+  // --- NEW: Watch for userId change and navigate ---
+  useEffect(() => {
+    // If the userId is set (meaning mockSignIn was successful)
+    if (userId) {
+      // Use replace to navigate and remove the login screen from the history stack
+      router.replace("/home");
     }
-    
-    setLoading(true);
-    setError('');
-    
-    try {
-      const auth = getAuth(app);
-      await signInWithEmailAndPassword(auth, email, password);
-      // Auth state listener in layout.tsx handles setting the userId and navigation
-    } catch (e: any) {
-      console.error("Login Error: ", e);
-      // Display a user-friendly error message
-      if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
-        setError('Invalid email or password.');
-      } else {
-        setError('Login failed. Please try again.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [userId, router]); // Re-run this effect whenever userId changes
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Welcome Back</Text>
-      
+      <Text style={styles.title}>Welcome to Study Buddy</Text>
+      <Text style={styles.subtitle}>Sign in to find your study group</Text>
+
+      {/* Mock login fields */}
       <TextInput
         style={styles.input}
-        value={email}
-        onChangeText={setEmail}
-        placeholder="Email"
+        placeholder="Email (Ignored for demo)"
         keyboardType="email-address"
-        autoCapitalize="none"
-        placeholderTextColor="#888"
+        placeholderTextColor="#9ca3af"
       />
       <TextInput
         style={styles.input}
-        value={password}
-        onChangeText={setPassword}
-        placeholder="Password"
+        placeholder="Password (Ignored for demo)"
         secureTextEntry
-        placeholderTextColor="#888"
+        placeholderTextColor="#9ca3af"
       />
 
-      {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-      <TouchableOpacity 
-        style={[styles.button, loading && styles.buttonDisabled]} 
-        onPress={handleLogin} 
-        disabled={loading}
+      {/* The button that performs the mock sign-in */}
+      <TouchableOpacity
+        style={styles.button}
+        onPress={mockSignIn} // Still calls the mock sign-in
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text style={styles.buttonText}>Log In</Text>
-        )}
+        <Text style={styles.buttonText}>Sign In / Register (DEMO)</Text>
       </TouchableOpacity>
-      
-      <View style={styles.linkContainer}>
-        <Text style={styles.linkText}>Don&apos;t have an account? </Text>
-        <Link href="/auth/signup" style={styles.link}>
-          Sign Up
-        </Link>
-      </View>
+
+      <Text style={styles.message}>
+        ⚠️ This is a mock screen for the presentation. Pressing the button
+        immediately authenticates you.
+      </Text>
     </View>
   );
-};
-
-export default LoginScreen;
-
+}
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f3f4f6',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#f3f4f6",
     padding: 30,
   },
   title: {
-    fontSize: 32,
-    fontWeight: '700',
-    color: '#1f2937',
-    marginBottom: 40,
+    fontSize: 28,
+    fontWeight: "700",
+    color: "#1f2937",
+    marginBottom: 10,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: "#6b7280",
+    marginBottom: 30,
+    textAlign: "center",
   },
   input: {
-    width: '100%',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
+    width: "100%",
+    maxWidth: 400,
     borderWidth: 1,
-    borderColor: '#d1d5db',
+    borderColor: "#d1d5db",
     borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontSize: 16,
-    color: '#1f2937',
-    backgroundColor: '#fff',
+    color: "#1f2937",
+    backgroundColor: "#fff",
     marginBottom: 15,
   },
   button: {
-    width: '100%',
-    backgroundColor: '#3b82f6',
-    paddingVertical: 15,
+    width: "100%",
+    maxWidth: 400,
+    backgroundColor: "#3b82f6",
+    paddingVertical: 14,
     borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     marginTop: 10,
   },
-  buttonDisabled: {
-    backgroundColor: '#93c5fd',
-  },
   buttonText: {
-    color: '#ffffff',
-    fontWeight: '600',
-    fontSize: 18,
-  },
-  errorText: {
-    color: '#ef4444',
-    marginBottom: 15,
-    fontSize: 14,
-  },
-  linkContainer: {
-    flexDirection: 'row',
-    marginTop: 20,
-  },
-  linkText: {
-    color: '#4b5563',
+    color: "#fff",
+    fontWeight: "600",
     fontSize: 16,
   },
-  link: {
-    color: '#3b82f6',
-    fontWeight: '600',
-    fontSize: 16,
-  }
+  message: {
+    marginTop: 40,
+    fontSize: 12,
+    textAlign: "center",
+    color: "#dc2626",
+    paddingHorizontal: 10,
+  },
 });
