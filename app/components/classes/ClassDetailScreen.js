@@ -57,7 +57,7 @@ export default function ClassDetailScreen({
 
         <TouchableOpacity 
           style={styles.menuItem}
-          onPress={() => setActiveScreen('create-request')}
+          onPress={() => setActiveScreen('find-buddy')}
         >
           <View style={styles.menuItemLeft}>
             <UsersIcon size={24} color="#2563eb" />
